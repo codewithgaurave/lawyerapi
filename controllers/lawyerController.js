@@ -1,0 +1,181 @@
+import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
+import Lawyer from "../models/Lawyer.js";
+
+const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "1h";
+const SALT_ROUNDS = parseInt(process.env.BCRYPT_SALT_ROUNDS || "12", 10);
+
+const signJwt = (lawyer) =>
+  jwt.sign(
+    { sub: String(lawyer._id), mobile: lawyer.mobile_number, tv: lawyer.tokenVersion },
+    JWT_SECRET,
+    { expiresIn: JWT_EXPIRES_IN }
+  );
+
+export const registerLawyer = async (req, res) => {
+  try {
+    const {
+      full_name,
+      mobile_number,
+      email,
+      password,
+      bar_council_number,
+      bar_council_state,
+      years_of_experience,
+      specialization,
+      classification,
+      sub_classification,
+      office_address,
+      city,
+      state,
+      pincode,
+    } = req.body;
+
+    if (!full_name || !mobile_number || !email || !password || !bar_council_number || !bar_council_state || !years_of_experience || !specialization || !classification || !office_address || !city || !state || !pincode) {
+      return res.status(400).json({ message: "All required fields must be provided" });
+    }
+
+    if (classification === "Civil" && !sub_classification) {
+      return res.status(400).json({ message: "Sub classification is required for Civil classification" });
+    }
+
+    const exists = await Lawyer.findOne({
+      $or: [{ mobile_number }, { email }, { bar_council_number }],
+    });
+
+    if (exists) {
+      return res.status(409).json({ message: "Lawyer already exists with this mobile, email or bar council number" });
+    }
+
+    const hash = await bcrypt.hash(password, SALT_ROUNDS);
+
+    const lawyer = await Lawyer.create({
+      full_name,
+      mobile_number,
+      email,
+      password: hash,
+      bar_council_number,
+      bar_council_state,
+      years_of_experience,
+      specialization,
+      classification,
+      sub_classification,
+      office_address,
+      city,
+      state,
+      pincode,
+    });
+
+    return res.status(201).json({
+      message: "Lawyer registered successfully",
+      lawyer: {
+        id: lawyer._id,
+        full_name: lawyer.full_name,
+        mobile_number: lawyer.mobile_number,
+        email: lawyer.email,
+      },
+    });
+  } catch (err) {
+    console.error("registerLawyer error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const loginLawyer = async (req, res) => {
+  try {
+    const { mobile_number, password } = req.body;
+
+    if (!mobile_number || !password) {
+      return res.status(400).json({ message: "Mobile number and password are required" });
+    }
+
+    const lawyer = await Lawyer.findOne({ mobile_number }).select("+password +tokenVersion");
+    if (!lawyer) return res.status(401).json({ message: "Invalid credentials" });
+
+    const ok = await bcrypt.compare(password, lawyer.password);
+    if (!ok) return res.status(401).json({ message: "Invalid credentials" });
+
+    const token = signJwt(lawyer);
+
+    return res.json({
+      message: "Login successful",
+      lawyer: {
+        id: lawyer._id,
+        full_name: lawyer.full_name,
+        mobile_number: lawyer.mobile_number,
+        email: lawyer.email,
+      },
+      token,
+    });
+  } catch (err) {
+    console.error("loginLawyer error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const getProfile = async (req, res) => {
+  try {
+    const lawyer = await Lawyer.findById(req.lawyer.id);
+    if (!lawyer) return res.status(404).json({ message: "Lawyer not found" });
+    return res.json({ lawyer });
+  } catch (err) {
+    console.error("getProfile error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const updateProfile = async (req, res) => {
+  try {
+    const lawyer = await Lawyer.findByIdAndUpdate(req.lawyer.id, req.body, { new: true, runValidators: true });
+    if (!lawyer) return res.status(404).json({ message: "Lawyer not found" });
+    return res.json({ message: "Profile updated successfully", lawyer });
+  } catch (err) {
+    console.error("updateProfile error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const getAllLawyers = async (req, res) => {
+  try {
+    const lawyers = await Lawyer.find();
+    return res.json({ lawyers });
+  } catch (err) {
+    console.error("getAllLawyers error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const updateLawyerByAdmin = async (req, res) => {
+  try {
+    const lawyer = await Lawyer.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    if (!lawyer) return res.status(404).json({ message: "Lawyer not found" });
+    return res.json({ message: "Lawyer updated successfully", lawyer });
+  } catch (err) {
+    console.error("updateLawyerByAdmin error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const deleteLawyer = async (req, res) => {
+  try {
+    const lawyer = await Lawyer.findByIdAndDelete(req.params.id);
+    if (!lawyer) return res.status(404).json({ message: "Lawyer not found" });
+    return res.json({ message: "Lawyer deleted successfully" });
+  } catch (err) {
+    console.error("deleteLawyer error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const toggleLawyerStatus = async (req, res) => {
+  try {
+    const { isActive } = req.body;
+    const lawyer = await Lawyer.findByIdAndUpdate(req.params.id, { isActive }, { new: true });
+    if (!lawyer) return res.status(404).json({ message: "Lawyer not found" });
+    return res.json({ message: `Lawyer ${isActive ? "activated" : "deactivated"} successfully`, lawyer });
+  } catch (err) {
+    console.error("toggleLawyerStatus error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
