@@ -16,6 +16,7 @@ const signJwt = (admin) =>
     }
   );
 
+  
 // Create Admin
 export const createAdmin = async (req, res) => {
   try {
