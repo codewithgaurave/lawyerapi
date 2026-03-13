@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import Lawyer from "../models/Lawyer.js";
+import Service from "../models/Service.js";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "1h";
@@ -177,5 +178,85 @@ export const toggleLawyerStatus = async (req, res) => {
   } catch (err) {
     console.error("toggleLawyerStatus error:", err);
     return res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const searchLawyers = async (req, res) => {
+  try {
+    const { search, ...filters } = req.query;
+    let query = { isActive: true };
+
+    // 1. Global Search (across multiple fields)
+    if (search) {
+      const searchRegex = new RegExp(search, "i");
+      const searchableFields = [
+        "full_name",
+        "email",
+        "mobile_number",
+        "bar_council_number",
+        "bar_council_state",
+        "specialization",
+        "classification",
+        "sub_classification",
+        "office_address",
+        "city",
+        "state",
+        "pincode",
+        "about_lawyer",
+        "court_practice",
+        "law_degree",
+        "university_name",
+        "languages_spoken",
+      ];
+      query.$or = searchableFields.map((field) => ({ [field]: searchRegex }));
+
+      // If search string is a number, also check numeric fields
+      if (!isNaN(search)) {
+        const num = Number(search);
+        query.$or.push(
+          { years_of_experience: num },
+          { consultation_fee: num },
+          { graduation_year: num }
+        );
+      }
+    }
+
+    // 2. Specific Field Filtering (Dynamic)
+    const schemaPaths = Object.keys(Lawyer.schema.paths);
+    Object.keys(filters).forEach((key) => {
+      if (schemaPaths.includes(key) && filters[key]) {
+        const fieldType = Lawyer.schema.paths[key].instance;
+        if (fieldType === "String") {
+          query[key] = { $regex: filters[key], $options: "i" };
+        } else if (fieldType === "Number") {
+          query[key] = Number(filters[key]);
+        } else if (fieldType === "Boolean") {
+          query[key] = filters[key] === "true";
+        } else if (fieldType === "Array") {
+          // Assuming arrays of strings like languages_spoken
+          query[key] = { $in: [new RegExp(filters[key], "i")] };
+        } else {
+          query[key] = filters[key];
+        }
+      }
+    });
+
+    const lawyers = await Lawyer.find(query);
+
+    const lawyersWithServices = await Promise.all(
+      lawyers.map(async (lawyer) => {
+        const services = await Service.find({ lawyer_id: lawyer._id });
+        return { ...lawyer.toObject(), services };
+      })
+    );
+
+    return res.json({
+      success: true,
+      count: lawyersWithServices.length,
+      lawyers: lawyersWithServices,
+    });
+  } catch (err) {
+    console.error("searchLawyers error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
   }
 };

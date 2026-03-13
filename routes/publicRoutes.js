@@ -1,8 +1,11 @@
 import express from "express";
 import Lawyer from "../models/Lawyer.js";
 import Service from "../models/Service.js";
+import { searchLawyers } from "../controllers/lawyerController.js";
 
 const router = express.Router();
+
+router.get("/search", searchLawyers);
 
 router.get("/all", async (req, res) => {
   try {
@@ -24,7 +27,6 @@ router.get("/:id", async (req, res) => {
   try {
     const lawyer = await Lawyer.findOne({ _id: req.params.id, isActive: true });
     if (!lawyer) return res.status(404).json({ message: "Lawyer not found" });
-    
     const services = await Service.find({ lawyer_id: lawyer._id });
     return res.json({ lawyer: { ...lawyer.toObject(), services } });
   } catch (err) {
