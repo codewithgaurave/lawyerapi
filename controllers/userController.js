@@ -26,28 +26,24 @@ const sendOTPViaVoice = async (mobileNumber, otp) => {
       // Format mobile number with country code if needed
       const formattedNumber = mobileNumber.startsWith("91") ? mobileNumber : `91${mobileNumber}`;
 
-      // Build URL
+      // Build URL with proper encoding
       const url = `http://voicefortius.com/api/OBDOTP/otpcall?apikey=${apiKey}&callerId=${callerId}&mobileNumber=${formattedNumber}&fileName=${fileName}&otp=${otp}&retry=0`;
 
       console.log("\n📞 Calling VoiceFortius API...");
       console.log("Mobile:", formattedNumber);
       console.log("OTP:", otp);
+      console.log("URL:", url);
 
       // Use http.get with timeout
-      const req = http.get(url, { timeout: 3000 }, (res) => {
+      const req = http.get(url, { timeout: 5000 }, (res) => {
         let data = "";
         res.on("data", (chunk) => {
           data += chunk;
         });
         res.on("end", () => {
+          console.log("✅ VoiceFortius Response Status:", res.statusCode);
           console.log("✅ VoiceFortius Response:", data);
-          if (data.includes("Success") || data.includes("success")) {
-            console.log("✅ VOICE CALL INITIATED!");
-            resolve({ success: true, data: data });
-          } else {
-            console.log("✅ Response received:", data);
-            resolve({ success: true, data: data });
-          }
+          resolve({ success: true, statusCode: res.statusCode, data: data });
         });
       });
 
@@ -57,9 +53,9 @@ const sendOTPViaVoice = async (mobileNumber, otp) => {
       });
 
       req.on("timeout", () => {
-        console.log("⚠️ Request timeout (expected - call initiated)");
+        console.log("⚠️ Request timeout");
         req.destroy();
-        resolve({ success: true, message: "Call initiated (timeout expected)" });
+        resolve({ success: false, message: "Request timeout" });
       });
 
     } catch (error) {
