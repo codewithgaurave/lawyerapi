@@ -10,29 +10,25 @@ const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
-// Send OTP via VoiceFortius - Direct API Call
-const sendOTPViaVoice = async (mobileNumber, otp) => {
+// Send OTP via SMS API
+const sendOTPViaSMS = async (mobileNumber, otp) => {
   return new Promise((resolve) => {
     try {
-      const apiKey = process.env.VOICEFORTIUS_API_KEY;
-      const callerId = process.env.VOICEFORTIUS_CALLER_ID;
-      const fileName = process.env.VOICE_OTP_FILE || "otpFiletoPlay.mp3";
-
-      if (!apiKey || !callerId) {
-        console.log("⚠️ VoiceFortius credentials missing");
-        return resolve({ success: false, message: "Credentials missing" });
-      }
+      const smsUser = process.env.SMS_USER || "hucsbj";
+      const smsPassword = process.env.SMS_PASSWORD || "hucsbj123";
+      const senderId = process.env.SMS_SENDER_ID || "HUCSBJ";
 
       // Format mobile number with country code if needed
       const formattedNumber = mobileNumber.startsWith("91") ? mobileNumber : `91${mobileNumber}`;
 
-      // Build URL with proper encoding
-      const url = `http://voicefortius.com/api/OBDOTP/otpcall?apikey=${apiKey}&callerId=${callerId}&mobileNumber=${formattedNumber}&fileName=${fileName}&otp=${otp}&retry=0`;
+      const message = `${otp} is your OTP for login request on HUCS. Valid for 2 mins. Never Share OTP HUCSBJ`;
 
-      console.log("\n📞 Calling VoiceFortius API...");
+      // Build URL with proper encoding
+      const url = `http://smsanoviq.com/api/mt/SendSMS?user=${smsUser}&password=${smsPassword}&senderid=${senderId}&channel=Trans&DCS=0&flashsms=0&number=${formattedNumber}&text=${encodeURIComponent(message)}&route=02&peid=1701173890459387808&DLTTemplateId=1707175973383231576`;
+
+      console.log("\n📱 Sending OTP via SMS...");
       console.log("Mobile:", formattedNumber);
       console.log("OTP:", otp);
-      console.log("URL:", url);
 
       // Use http.get with timeout
       const req = http.get(url, { timeout: 5000 }, (res) => {
@@ -41,14 +37,14 @@ const sendOTPViaVoice = async (mobileNumber, otp) => {
           data += chunk;
         });
         res.on("end", () => {
-          console.log("✅ VoiceFortius Response Status:", res.statusCode);
-          console.log("✅ VoiceFortius Response:", data);
+          console.log("✅ SMS API Response Status:", res.statusCode);
+          console.log("✅ SMS API Response:", data);
           resolve({ success: true, statusCode: res.statusCode, data: data });
         });
       });
 
       req.on("error", (error) => {
-        console.error("❌ Voice API Error:", error.message);
+        console.error("❌ SMS API Error:", error.message);
         resolve({ success: false, message: error.message });
       });
 
@@ -59,7 +55,7 @@ const sendOTPViaVoice = async (mobileNumber, otp) => {
       });
 
     } catch (error) {
-      console.error("❌ Voice API Error:", error.message);
+      console.error("❌ SMS API Error:", error.message);
       resolve({ success: false, message: error.message });
     }
   });
@@ -109,16 +105,16 @@ export const sendOTP = async (req, res) => {
     console.log("╚════════════════════════════════════════╝");
     console.log("\n");
 
-    // Send OTP via Voice Call
-    const voiceResult = await sendOTPViaVoice(mobile_number, otp);
+    // Send OTP via SMS
+    const smsResult = await sendOTPViaSMS(mobile_number, otp);
 
     return res.json({
       message: "OTP generated and sent successfully",
       otp: otp,
       mobile_number,
-      status: "OTP sent via voice call",
+      status: "OTP sent via SMS",
       expiresIn: "10 minutes",
-      voiceResponse: voiceResult
+      smsResponse: smsResult
     });
   } catch (err) {
     console.error("sendOTP error:", err);
