@@ -13,6 +13,10 @@ import lawyerRoutes from "./routes/lawyerRoutes.js";
 import serviceRoutes from "./routes/serviceRoutes.js";
 import publicRoutes from "./routes/publicRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
+import experienceRoutes from "./routes/experienceRoutes.js";
+import certificateRoutes from "./routes/certificateRoutes.js";
+import educationRoutes from "./routes/educationRoutes.js";
+import skillRoutes from "./routes/skillRoutes.js";
 
 
 const app = express();
@@ -48,6 +52,10 @@ app.use("/api/lawyers", lawyerRoutes);
 app.use("/api/services", serviceRoutes);
 app.use("/api/public/lawyers", publicRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/experiences", experienceRoutes);
+app.use("/api/certificates", certificateRoutes);
+app.use("/api/education", educationRoutes);
+app.use("/api/skills", skillRoutes);
 
 // Health / root
 app.get("/", (_req, res) => res.send("✅ API is running..."));

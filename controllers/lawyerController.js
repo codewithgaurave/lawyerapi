@@ -2,6 +2,10 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import Lawyer from "../models/Lawyer.js";
 import Service from "../models/Service.js";
+import Experience from "../models/Experience.js";
+import Certificate from "../models/Certificate.js";
+import Education from "../models/Education.js";
+import Skill from "../models/Skill.js";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "1h";
@@ -17,6 +21,7 @@ const signJwt = (lawyer) =>
 export const registerLawyer = async (req, res) => {
   try {
     const {
+      registration_type,
       full_name,
       mobile_number,
       email,
@@ -31,16 +36,40 @@ export const registerLawyer = async (req, res) => {
       city,
       state,
       pincode,
+      firm_name,
+      firm_registration_number,
+      firm_email,
     } = req.body;
 
-    if (!full_name || !mobile_number || !email || !password || !bar_council_number || !bar_council_state || !years_of_experience || !specialization || !classification || !office_address || !city || !state || !pincode) {
+    // Validate registration type
+    if (!["Individual", "Firm", "Association"].includes(registration_type)) {
+      return res.status(400).json({ message: "Invalid registration type. Must be Individual, Firm, or Association" });
+    }
+
+    // Validate Gmail requirement
+    if (!email || !email.endsWith("@gmail.com")) {
+      return res.status(400).json({ message: "Gmail email is required" });
+    }
+
+    if (registration_type !== "Individual" && firm_email && !firm_email.endsWith("@gmail.com")) {
+      return res.status(400).json({ message: "Firm email must also be Gmail" });
+    }
+
+    // Validate required fields
+    if (!full_name || !mobile_number || !password || !bar_council_number || !bar_council_state || !years_of_experience || !specialization || !classification || !office_address || !city || !state || !pincode) {
       return res.status(400).json({ message: "All required fields must be provided" });
+    }
+
+    // Validate firm details for Firm/Association
+    if (registration_type !== "Individual" && (!firm_name || !firm_registration_number)) {
+      return res.status(400).json({ message: "Firm name and registration number required for Firm/Association" });
     }
 
     if (classification === "Civil" && !sub_classification) {
       return res.status(400).json({ message: "Sub classification is required for Civil classification" });
     }
 
+    // Check for duplicates
     const exists = await Lawyer.findOne({
       $or: [{ mobile_number }, { email }, { bar_council_number }],
     });
@@ -52,6 +81,7 @@ export const registerLawyer = async (req, res) => {
     const hash = await bcrypt.hash(password, SALT_ROUNDS);
 
     const lawyer = await Lawyer.create({
+      registration_type,
       full_name,
       mobile_number,
       email,
@@ -66,6 +96,9 @@ export const registerLawyer = async (req, res) => {
       city,
       state,
       pincode,
+      firm_name: registration_type !== "Individual" ? firm_name : undefined,
+      firm_registration_number: registration_type !== "Individual" ? firm_registration_number : undefined,
+      firm_email: registration_type !== "Individual" ? firm_email : undefined,
     });
 
     return res.status(201).json({
@@ -75,6 +108,7 @@ export const registerLawyer = async (req, res) => {
         full_name: lawyer.full_name,
         mobile_number: lawyer.mobile_number,
         email: lawyer.email,
+        registration_type: lawyer.registration_type,
       },
     });
   } catch (err) {
@@ -106,6 +140,7 @@ export const loginLawyer = async (req, res) => {
         full_name: lawyer.full_name,
         mobile_number: lawyer.mobile_number,
         email: lawyer.email,
+        registration_type: lawyer.registration_type,
       },
       token,
     });
@@ -119,7 +154,21 @@ export const getProfile = async (req, res) => {
   try {
     const lawyer = await Lawyer.findById(req.lawyer.id);
     if (!lawyer) return res.status(404).json({ message: "Lawyer not found" });
-    return res.json({ lawyer });
+    
+    const experiences = await Experience.find({ lawyer_id: lawyer._id });
+    const certificates = await Certificate.find({ lawyer_id: lawyer._id });
+    const education = await Education.find({ lawyer_id: lawyer._id });
+    const skills = await Skill.find({ lawyer_id: lawyer._id });
+    const services = await Service.find({ lawyer_id: lawyer._id });
+
+    return res.json({
+      lawyer: lawyer.toObject(),
+      experiences,
+      certificates,
+      education,
+      skills,
+      services,
+    });
   } catch (err) {
     console.error("getProfile error:", err);
     return res.status(500).json({ message: "Server error" });
@@ -186,7 +235,6 @@ export const searchLawyers = async (req, res) => {
     const { search, ...filters } = req.query;
     let query = { isActive: true };
 
-    // 1. Global Search (across multiple fields)
     if (search) {
       const searchRegex = new RegExp(search, "i");
       const searchableFields = [
@@ -207,10 +255,10 @@ export const searchLawyers = async (req, res) => {
         "law_degree",
         "university_name",
         "languages_spoken",
+        "firm_name",
       ];
       query.$or = searchableFields.map((field) => ({ [field]: searchRegex }));
 
-      // If search string is a number, also check numeric fields
       if (!isNaN(search)) {
         const num = Number(search);
         query.$or.push(
@@ -221,7 +269,6 @@ export const searchLawyers = async (req, res) => {
       }
     }
 
-    // 2. Specific Field Filtering (Dynamic)
     const schemaPaths = Object.keys(Lawyer.schema.paths);
     Object.keys(filters).forEach((key) => {
       if (schemaPaths.includes(key) && filters[key]) {
@@ -233,7 +280,6 @@ export const searchLawyers = async (req, res) => {
         } else if (fieldType === "Boolean") {
           query[key] = filters[key] === "true";
         } else if (fieldType === "Array") {
-          // Assuming arrays of strings like languages_spoken
           query[key] = { $in: [new RegExp(filters[key], "i")] };
         } else {
           query[key] = filters[key];

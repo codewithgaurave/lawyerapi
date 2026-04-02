@@ -92,6 +92,25 @@ const templateMulter = multer({
 const uploadTemplateImage = templateMulter.single("templateImage");
 
 // -----------------------------------------------------
+// ✅ CERTIFICATE IMAGE UPLOAD
+// -----------------------------------------------------
+const certificateStorage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: "lawyer_certificates",
+    resource_type: "auto",
+  },
+});
+
+const uploadCertificateImage = multer({
+  storage: certificateStorage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: (req, file, cb) => {
+    cb(null, true);
+  },
+}).single("certificate_file");
+
+// -----------------------------------------------------
 // EXPORTS
 // -----------------------------------------------------
 export {
@@ -99,4 +118,5 @@ export {
   uploadUserFields,
   uploadSliderImage,
   uploadTemplateImage,
+  uploadCertificateImage,
 };
