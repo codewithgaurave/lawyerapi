@@ -230,6 +230,65 @@ export const toggleLawyerStatus = async (req, res) => {
   }
 };
 
+export const getPublicLawyers = async (req, res) => {
+  try {
+    const lawyers = await Lawyer.find({ isActive: true });
+
+    const lawyersWithCompleteProfile = await Promise.all(
+      lawyers.map(async (lawyer) => {
+        const experiences = await Experience.find({ lawyer_id: lawyer._id });
+        const certificates = await Certificate.find({ lawyer_id: lawyer._id });
+        const education = await Education.find({ lawyer_id: lawyer._id });
+        const skills = await Skill.find({ lawyer_id: lawyer._id });
+        const services = await Service.find({ lawyer_id: lawyer._id });
+
+        return {
+          lawyer: lawyer.toObject(),
+          experiences,
+          certificates,
+          education,
+          skills,
+          services,
+        };
+      })
+    );
+
+    return res.json({
+      success: true,
+      count: lawyersWithCompleteProfile.length,
+      lawyers: lawyersWithCompleteProfile,
+    });
+  } catch (err) {
+    console.error("getPublicLawyers error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+export const getPublicLawyerById = async (req, res) => {
+  try {
+    const lawyer = await Lawyer.findOne({ _id: req.params.id, isActive: true });
+    if (!lawyer) return res.status(404).json({ message: "Lawyer not found" });
+
+    const experiences = await Experience.find({ lawyer_id: lawyer._id });
+    const certificates = await Certificate.find({ lawyer_id: lawyer._id });
+    const education = await Education.find({ lawyer_id: lawyer._id });
+    const skills = await Skill.find({ lawyer_id: lawyer._id });
+    const services = await Service.find({ lawyer_id: lawyer._id });
+
+    return res.json({
+      lawyer: lawyer.toObject(),
+      experiences,
+      certificates,
+      education,
+      skills,
+      services,
+    });
+  } catch (err) {
+    console.error("getPublicLawyerById error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
 export const searchLawyers = async (req, res) => {
   try {
     const { search, ...filters } = req.query;
@@ -289,17 +348,29 @@ export const searchLawyers = async (req, res) => {
 
     const lawyers = await Lawyer.find(query);
 
-    const lawyersWithServices = await Promise.all(
+    const lawyersWithCompleteProfile = await Promise.all(
       lawyers.map(async (lawyer) => {
+        const experiences = await Experience.find({ lawyer_id: lawyer._id });
+        const certificates = await Certificate.find({ lawyer_id: lawyer._id });
+        const education = await Education.find({ lawyer_id: lawyer._id });
+        const skills = await Skill.find({ lawyer_id: lawyer._id });
         const services = await Service.find({ lawyer_id: lawyer._id });
-        return { ...lawyer.toObject(), services };
+
+        return {
+          lawyer: lawyer.toObject(),
+          experiences,
+          certificates,
+          education,
+          skills,
+          services,
+        };
       })
     );
 
     return res.json({
       success: true,
-      count: lawyersWithServices.length,
-      lawyers: lawyersWithServices,
+      count: lawyersWithCompleteProfile.length,
+      lawyers: lawyersWithCompleteProfile,
     });
   } catch (err) {
     console.error("searchLawyers error:", err);
