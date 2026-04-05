@@ -11,15 +11,20 @@ export const authenticateLawyer = async (req, res, next) => {
     if (!token) return res.status(401).json({ message: "Token missing" });
 
     const decoded = jwt.verify(token, JWT_SECRET);
-    const lawyer = await Lawyer.findById(decoded.sub);
+    const lawyer = await Lawyer.findById(decoded.sub).select("+tokenVersion");
 
     if (!lawyer) {
       return res.status(401).json({ message: "Invalid token" });
     }
 
+    // Check token version if present
+    if (decoded.tv !== undefined && lawyer.tokenVersion !== decoded.tv) {
+      return res.status(401).json({ message: "Token expired" });
+    }
+
     req.lawyer = { id: lawyer._id.toString(), mobile: lawyer.mobile_number, name: lawyer.full_name };
     next();
   } catch (err) {
-    return res.status(401).json({ message: "Unauthorized", error: err.message });
+    return res.status(401).json({ message: "Invalid token", error: err.message });
   }
 };

@@ -261,12 +261,11 @@ export const endCall = async (req, res) => {
 export const getCallHistory = async (req, res) => {
   try {
     const user_id = req.user?.id || req.lawyer?.id;
-    const user_type = req.user ? "User" : "Lawyer";
 
     const calls = await Call.find({
       $or: [
-        { caller_id: user_id, caller_type: user_type },
-        { receiver_id: user_id, receiver_type: user_type },
+        { caller_id: user_id },
+        { receiver_id: user_id },
       ],
     })
       .populate("caller_id", "name full_name mobile_number")
