@@ -56,6 +56,9 @@ const lawyerSchema = new mongoose.Schema(
     // Status
     isActive: { type: Boolean, default: true },
     tokenVersion: { type: Number, default: 0, select: false },
+
+    // FCM Token for push notifications
+    fcm_token: { type: String, default: null },
   },
   { timestamps: true }
 );

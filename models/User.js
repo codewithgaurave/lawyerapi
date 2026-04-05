@@ -8,6 +8,7 @@ const userSchema = new mongoose.Schema(
     otp: { type: String, select: false },
     otp_expiry: { type: Date, select: false },
     isActive: { type: Boolean, default: true },
+    fcm_token: { type: String, default: null },
   },
   { timestamps: true }
 );

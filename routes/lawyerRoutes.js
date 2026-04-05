@@ -15,6 +15,17 @@ router.get("/search", searchLawyers);
 
 router.get("/profile", authenticateLawyer, getProfile);
 router.put("/profile", authenticateLawyer, updateProfile);
+router.put("/fcm-token", authenticateLawyer, async (req, res) => {
+  try {
+    const { fcm_token } = req.body;
+    if (!fcm_token) return res.status(400).json({ message: "FCM token required" });
+    const Lawyer = (await import("../models/Lawyer.js")).default;
+    await Lawyer.findByIdAndUpdate(req.lawyer.id, { fcm_token });
+    return res.json({ message: "FCM token updated successfully" });
+  } catch (err) {
+    return res.status(500).json({ message: "Server error" });
+  }
+});
 
 router.get("/all", authenticateAdmin, getAllLawyers);
 router.put("/:id", authenticateAdmin, updateLawyerByAdmin);
