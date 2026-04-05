@@ -17,6 +17,7 @@ import experienceRoutes from "./routes/experienceRoutes.js";
 import certificateRoutes from "./routes/certificateRoutes.js";
 import educationRoutes from "./routes/educationRoutes.js";
 import skillRoutes from "./routes/skillRoutes.js";
+import callRoutes from "./routes/callRoutes.js";
 
 
 const app = express();
@@ -56,6 +57,7 @@ app.use("/api/experiences", experienceRoutes);
 app.use("/api/certificates", certificateRoutes);
 app.use("/api/education", educationRoutes);
 app.use("/api/skills", skillRoutes);
+app.use("/api/calls", callRoutes);
 
 // Health / root
 app.get("/", (_req, res) => res.send("✅ API is running..."));
