@@ -1,4 +1,5 @@
-import { RtcTokenBuilder, RtcRole } from "agora-token";
+import agoraToken from "agora-token";
+const { RtcTokenBuilder, RtcRole } = agoraToken;
 import Call from "../models/Call.js";
 import User from "../models/User.js";
 import Lawyer from "../models/Lawyer.js";
@@ -16,7 +17,7 @@ const generateChannelName = () => {
 };
 
 // Generate Agora RTC Token
-const generateAgoraToken = (channelName, uid, role = RtcRole.PUBLISHER) => {
+const generateAgoraToken = (channelName, uid, role = 1) => {
   if (!AGORA_APP_ID || !AGORA_APP_CERTIFICATE) {
     throw new Error("Agora credentials not configured");
   }
