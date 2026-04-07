@@ -11,6 +11,7 @@ import {
   getCallHistory,
   getCallDetails,
   updateCallStatus,
+  getIncomingCall,
 } from "../controllers/callController.js";
 import { authenticateUser } from "../middleware/userAuth.js";
 import { authenticateLawyer } from "../middleware/lawyerAuth.js";
@@ -58,6 +59,7 @@ router.post("/accept", authenticateUserOrLawyer, acceptCall);
 router.post("/reject", authenticateUserOrLawyer, rejectCall);
 router.post("/end", authenticateUserOrLawyer, endCall);
 router.post("/status", authenticateUserOrLawyer, updateCallStatus);
+router.get("/incoming", authenticateUserOrLawyer, getIncomingCall);
 router.get("/history", authenticateUserOrLawyer, getCallHistory);
 router.get("/:call_id", authenticateUserOrLawyer, getCallDetails);
 

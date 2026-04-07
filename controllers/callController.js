@@ -296,6 +296,39 @@ export const updateCallStatus = async (req, res) => {
   }
 };
 
+// ─── Get Incoming Ringing Call ───────────────────────────────────────────────
+export const getIncomingCall = async (req, res) => {
+  try {
+    const user_id = req.user?.id || req.lawyer?.id;
+
+    const call = await Call.findOne({
+      receiver_id: user_id,
+      status: "ringing",
+    })
+      .populate("caller_id", "name full_name")
+      .sort({ createdAt: -1 });
+
+    if (!call) return res.json({ call: null });
+
+    const callerName =
+      call.caller_id?.name || call.caller_id?.full_name || "User";
+
+    return res.json({
+      call: {
+        _id: call._id,
+        channel_name: call.channel_name,
+        caller_name: callerName,
+        caller_id: call.caller_id?._id,
+        agora_uid_receiver: call.agora_uid_receiver,
+        status: call.status,
+      },
+    });
+  } catch (err) {
+    console.error("getIncomingCall error:", err);
+    return res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
 // ─── Get Call History ─────────────────────────────────────────────────────────
 export const getCallHistory = async (req, res) => {
   try {
