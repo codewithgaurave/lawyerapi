@@ -49,20 +49,29 @@ export const sendFCMNotification = async (fcmToken, title, body, data = {}) => {
   }
 
   try {
+    const isCallNotification = data.type === "incoming_call";
+
     const message = {
       token: fcmToken,
-      notification: { title, body },
       data: Object.fromEntries(
-        Object.entries(data).map(([k, v]) => [k, String(v)])
+        Object.entries({ ...data, title, body }).map(([k, v]) => [k, String(v)])
       ),
       android: {
         priority: "high",
-        notification: {
-          sound: "default",
-          channelId: "calls",
-          priority: "max",
-          visibility: "public",
-        },
+        // Call notification ke liye notification field mat bhejo
+        // Flutter background handler trigger hoga aur getInitialMessage() kaam karega
+        ...(isCallNotification
+          ? {}
+          : {
+              notification: {
+                title,
+                body,
+                sound: "default",
+                channelId: "calls",
+                priority: "max",
+                visibility: "public",
+              },
+            }),
       },
       apns: {
         payload: {
@@ -74,13 +83,18 @@ export const sendFCMNotification = async (fcmToken, title, body, data = {}) => {
         },
         headers: {
           "apns-priority": "10",
-          "apns-push-type": "alert",
+          "apns-push-type": isCallNotification ? "background" : "alert",
         },
       },
     };
 
+    // Non-call notifications ke liye notification field add karo
+    if (!isCallNotification) {
+      message.notification = { title, body };
+    }
+
     const response = await admin.messaging().send(message);
-    console.log("✅ FCM notification sent:", response);
+    console.log("✅ FCM sent:", response);
     return { success: true, messageId: response };
   } catch (err) {
     console.error("❌ FCM send error:", err.message);
