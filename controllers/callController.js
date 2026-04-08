@@ -71,11 +71,15 @@ export const initiateCall = async (req, res) => {
     const receiverFcmToken = receiver.fcm_token;
     let fcmResult = { success: false, reason: "No FCM token" };
 
+    console.log(`📱 Receiver: ${receiver.name || receiver.full_name}`);
+    console.log(`🔑 FCM Token: ${receiverFcmToken ? receiverFcmToken.substring(0, 30) + '...' : 'NONE'}`);
+
     // Always set to ringing so polling works even if FCM fails
     call.status = "ringing";
     await call.save();
 
     if (receiverFcmToken) {
+      console.log('📤 Sending FCM notification...');
       fcmResult = await sendIncomingCallNotification(receiverFcmToken, {
         callId: call._id.toString(),
         channelName: channel_name,
@@ -86,6 +90,7 @@ export const initiateCall = async (req, res) => {
         receiverToken: receiver_token,
         receiverUid: receiver_uid,
       });
+      console.log(`📬 FCM Result:`, fcmResult);
     } else {
       console.log("⚠️  Receiver has no FCM token - falling back to polling");
     }
