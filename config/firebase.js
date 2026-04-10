@@ -60,7 +60,7 @@ export const sendIncomingCallNotification = async (fcmToken, callData) => {
       android: {
         priority: "high",
         notification: {
-          channel_id: "calls",
+          channel_id: "incoming_calls_v2",
           priority: "max",
           visibility: "public",
           sound: "ringtone",
