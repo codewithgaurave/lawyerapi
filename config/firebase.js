@@ -40,16 +40,12 @@ export const sendIncomingCallNotification = async (fcmToken, callData) => {
   if (!fcmToken) return { success: false, reason: "No FCM token" };
 
   try {
-    // notification field ZAROORI hai - isse Android khud notification dikhata hai
-    // app killed/background dono mein. Tap karne par getInitialMessage() se
-    // saara data milta hai Flutter ko.
     const message = {
       token: fcmToken,
       notification: {
         title: "📞 Incoming Call",
         body: `${callData.callerName} is calling you`,
       },
-      // data mein saara call info bhejo - getInitialMessage() se milega
       data: {
         type: "incoming_call",
         call_id: String(callData.callId),
@@ -67,10 +63,9 @@ export const sendIncomingCallNotification = async (fcmToken, callData) => {
           channel_id: "calls",
           priority: "max",
           visibility: "public",
-          sound: "default",
-          // fullScreenIntent - lock screen par bhi dikhega
-          notification_priority: "PRIORITY_MAX",
+          sound: "ringtone",
           default_vibrate_timings: true,
+          default_light_settings: true,
         },
       },
       apns: {
